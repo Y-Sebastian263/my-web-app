@@ -1,0 +1,63 @@
+name: Build Countdown Stream v1.10 Windows EXE
+on:
+  push:
+    branches:
+      - build/countdown-stream-v110
+    paths:
+      - countdown_source.b64
+      - .github/workflows/countdown-windows.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - name: Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Rust MSVC
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: './app/Countdown_v1_10_Stream_Tauri/src-tauri -> target'
+      - name: Unpack source archive
+        shell: pwsh
+        run: |
+          $encoded = (Get-Content -Raw 'countdown_source.b64').Trim()
+          [IO.File]::WriteAllBytes('countdown_source.zip', [Convert]::FromBase64String($encoded))
+          New-Item -ItemType Directory -Force 'app' | Out-Null
+          Expand-Archive -Path 'countdown_source.zip' -DestinationPath 'app' -Force
+      - name: Static JavaScript tests
+        working-directory: ./app/Countdown_v1_10_Stream_Tauri
+        shell: pwsh
+        run: |
+          node tests/stream-smoke.test.js
+          python tests/static-check.py
+      - name: Build Windows Tauri EXE
+        working-directory: ./app/Countdown_v1_10_Stream_Tauri
+        shell: pwsh
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
+      - name: Collect EXE
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force 'dist' | Out-Null
+          $exe = 'app/Countdown_v1_10_Stream_Tauri/src-tauri/target/release/countdown.exe'
+          if (!(Test-Path $exe)) { throw "Compiled EXE missing at $exe" }
+          Copy-Item $exe 'dist/Countdown_Stream_v1_10_x64.exe'
+          Get-Item 'dist/Countdown_Stream_v1_10_x64.exe' | Format-List Name,Length
+      - name: Upload EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: Countdown-Stream-v1.10-Windows-x64
+          path: dist/Countdown_Stream_v1_10_x64.exe
+          if-no-files-found: error
+          retention-days: 7
