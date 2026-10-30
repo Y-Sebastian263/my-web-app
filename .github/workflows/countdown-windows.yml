@@ -39,6 +39,7 @@ jobs:
         shell: pwsh
         run: |
           node tests/stream-smoke.test.js
+          python -m pip install tinycss2
           python tests/static-check.py
       - name: Build Windows Tauri EXE
         working-directory: ./app/Countdown_v1_10_Stream_Tauri
