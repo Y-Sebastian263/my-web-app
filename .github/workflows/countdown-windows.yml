@@ -1,8 +1,8 @@
-name: Build Countdown Stream v1.11 Windows EXE
+name: Build Countdown Stream v1.12 Windows EXE
 on:
   push:
     branches:
-      - build/countdown-stream-v111
+      - build/countdown-stream-v112
     paths:
       - countdown_source.b64
       - .github/workflows/countdown-windows.yml
@@ -26,7 +26,7 @@ jobs:
       - name: Cache Cargo
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: './app/Countdown_v1_11_Stream_Tauri/src-tauri -> target'
+          workspaces: './app/Countdown_v1_12_Stream_Tauri/src-tauri -> target'
       - name: Unpack source archive
         shell: pwsh
         run: |
@@ -35,15 +35,17 @@ jobs:
           New-Item -ItemType Directory -Force 'app' | Out-Null
           Expand-Archive -Path 'countdown_source.zip' -DestinationPath 'app' -Force
       - name: Static JavaScript tests
-        working-directory: ./app/Countdown_v1_11_Stream_Tauri
+        working-directory: ./app/Countdown_v1_12_Stream_Tauri
         shell: pwsh
         run: |
           node tests/stream-smoke.test.js
           node tests/visibility-controls.test.js
+          node tests/obs-browser.test.js
+          node tests/obs-mode-controls.test.js
           python -m pip install tinycss2
           python -X utf8 tests/static-check.py
       - name: Build Windows Tauri EXE
-        working-directory: ./app/Countdown_v1_11_Stream_Tauri
+        working-directory: ./app/Countdown_v1_12_Stream_Tauri
         shell: pwsh
         run: |
           npm install --no-audit --no-fund
@@ -52,14 +54,14 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force 'dist' | Out-Null
-          $exe = 'app/Countdown_v1_11_Stream_Tauri/src-tauri/target/release/countdown.exe'
+          $exe = 'app/Countdown_v1_12_Stream_Tauri/src-tauri/target/release/countdown.exe'
           if (!(Test-Path $exe)) { throw "Compiled EXE missing at $exe" }
-          Copy-Item $exe 'dist/Countdown_Stream_v1_11_x64.exe'
-          Get-Item 'dist/Countdown_Stream_v1_11_x64.exe' | Format-List Name,Length
+          Copy-Item $exe 'dist/Countdown_Stream_v1_12_x64.exe'
+          Get-Item 'dist/Countdown_Stream_v1_12_x64.exe' | Format-List Name,Length
       - name: Upload EXE
         uses: actions/upload-artifact@v4
         with:
-          name: Countdown-Stream-v1.11-Windows-x64
-          path: dist/Countdown_Stream_v1_11_x64.exe
+          name: Countdown-Stream-v1.12-Windows-x64
+          path: dist/Countdown_Stream_v1_12_x64.exe
           if-no-files-found: error
           retention-days: 7
